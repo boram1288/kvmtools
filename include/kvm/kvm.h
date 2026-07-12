@@ -90,6 +90,7 @@ struct kvm {
 	u64			ram_size;	/* Guest memory size, in bytes */
 	void			*ram_start;
 	u64			ram_pagesize;
+	int			ram_guest_memfd; /* guest_memfd backing RAM, -1 if none */
 	struct mutex		mem_banks_lock;
 	struct list_head	mem_banks;
 

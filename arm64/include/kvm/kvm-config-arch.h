@@ -20,6 +20,7 @@ struct kvm_config_arch {
 	bool		no_pvtime;
 	bool		psci;
 	bool		protected;
+	bool		guest_memfd;
 };
 
 int irqchip_parser(const struct option *opt, const char *arg, int unset);
@@ -73,6 +74,8 @@ int sve_vl_parser(const struct option *opt, const char *arg, int unset);
 	OPT_BOOLEAN('\0', "e2h0", &(cfg)->e2h0,					\
 		    "Create guest without VHE support"),			\
 	OPT_BOOLEAN('\0', "protected", &(cfg)->protected,			\
-			"Create a protected VM when pKVM is enabled"),
+			"Create a protected VM when pKVM is enabled"),		\
+	OPT_BOOLEAN('\0', "guest-memfd", &(cfg)->guest_memfd,			\
+			"Use guest_memfd to back guest RAM"),
 
 #endif /* ARM_COMMON__KVM_CONFIG_ARCH_H */

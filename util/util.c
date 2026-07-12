@@ -6,7 +6,9 @@
 #include "kvm/util.h"
 
 #include <kvm/kvm.h>
+#include <linux/kvm.h>
 #include <linux/magic.h>	/* For HUGETLBFS_MAGIC */
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
@@ -168,4 +170,39 @@ void *mmap_anon_or_hugetlbfs(struct kvm *kvm, const char *hugetlbfs_path, u64 si
 		kvm->ram_pagesize = getpagesize();
 		return mmap(NULL, size, PROT_RW, MAP_ANON_NORESERVE, -1, 0);
 	}
+}
+
+/*
+ * Map guest RAM backed by a guest_memfd. The file descriptor is kept open
+ * until teardown (kvm__arch_delete_ram), after the mapping is removed.
+ */
+void *mmap_guest_memfd(struct kvm *kvm, u64 size)
+{
+	u64 flags = GUEST_MEMFD_FLAG_MMAP | GUEST_MEMFD_FLAG_INIT_SHARED;
+	struct kvm_create_guest_memfd gmem = {
+		.size	= size,
+		.flags	= flags,
+	};
+	void *addr;
+	int ret;
+
+	if (!kvm__supports_extension(kvm, KVM_CAP_GUEST_MEMFD))
+		die("kernel does not support guest_memfd");
+
+	ret = ioctl(kvm->vm_fd, KVM_CHECK_EXTENSION, KVM_CAP_GUEST_MEMFD_FLAGS);
+	if (ret < 0 || ((u64)ret & flags) != flags)
+		die("VM type does not support guest_memfd with mmap");
+
+	ret = ioctl(kvm->vm_fd, KVM_CREATE_GUEST_MEMFD, &gmem);
+	if (ret < 0)
+		die_perror("KVM_CREATE_GUEST_MEMFD");
+
+	addr = mmap(NULL, size, PROT_RW, MAP_SHARED, ret, 0);
+	if (addr == MAP_FAILED)
+		die_perror("guest_memfd mmap");
+
+	kvm->ram_guest_memfd = ret;
+	kvm->ram_pagesize = getpagesize();
+
+	return addr;
 }

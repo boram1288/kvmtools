@@ -49,7 +49,12 @@ void kvm__init_ram(struct kvm *kvm)
 	kvm->arch.ram_alloc_size = kvm->ram_size;
 	if (!kvm->cfg.hugetlbfs_path)
 		kvm->arch.ram_alloc_size += SZ_2M;
-	kvm->arch.ram_alloc_start = mmap_anon_or_hugetlbfs(kvm,
+
+	if (kvm->cfg.arch.guest_memfd)
+		kvm->arch.ram_alloc_start = mmap_guest_memfd(kvm,
+						kvm->arch.ram_alloc_size);
+	else
+		kvm->arch.ram_alloc_start = mmap_anon_or_hugetlbfs(kvm,
 						kvm->cfg.hugetlbfs_path,
 						kvm->arch.ram_alloc_size);
 
@@ -60,17 +65,25 @@ void kvm__init_ram(struct kvm *kvm)
 	kvm->ram_start = (void *)ALIGN((unsigned long)kvm->arch.ram_alloc_start,
 					SZ_2M);
 
-	madvise(kvm->arch.ram_alloc_start, kvm->arch.ram_alloc_size,
-		MADV_MERGEABLE);
+	if (!kvm->cfg.arch.guest_memfd) {
+		madvise(kvm->arch.ram_alloc_start, kvm->arch.ram_alloc_size,
+			MADV_MERGEABLE);
 
-	madvise(kvm->arch.ram_alloc_start, kvm->arch.ram_alloc_size,
-		MADV_HUGEPAGE);
+		madvise(kvm->arch.ram_alloc_start, kvm->arch.ram_alloc_size,
+			MADV_HUGEPAGE);
+	}
 
 	phys_start	= kvm->cfg.ram_addr;
 	phys_size	= kvm->ram_size;
 	host_mem	= kvm->ram_start;
 
-	err = kvm__register_ram(kvm, phys_start, phys_size, host_mem);
+	if (kvm->cfg.arch.guest_memfd)
+		err = kvm__register_ram_guest_memfd(kvm, phys_start,
+						    phys_size, host_mem,
+						    kvm->ram_guest_memfd,
+						    host_mem - kvm->arch.ram_alloc_start);
+	else
+		err = kvm__register_ram(kvm, phys_start, phys_size, host_mem);
 	if (err)
 		die("Failed to register %lld bytes of memory at physical "
 		    "address 0x%llx [err %d]", phys_size, phys_start, err);
@@ -84,6 +97,11 @@ void kvm__init_ram(struct kvm *kvm)
 void kvm__arch_delete_ram(struct kvm *kvm)
 {
 	munmap(kvm->arch.ram_alloc_start, kvm->arch.ram_alloc_size);
+
+	if (kvm->ram_guest_memfd >= 0) {
+		close(kvm->ram_guest_memfd);
+		kvm->ram_guest_memfd = -1;
+	}
 }
 
 void kvm__arch_read_term(struct kvm *kvm)
@@ -104,6 +122,11 @@ static void kvm__arch_enable_mte(struct kvm *kvm)
 
 	if (kvm->cfg.arch.aarch32_guest) {
 		pr_debug("MTE is incompatible with AArch32");
+		return;
+	}
+
+	if (kvm->cfg.arch.guest_memfd) {
+		pr_debug("MTE is incompatible with guest_memfd");
 		return;
 	}
 
@@ -467,6 +490,15 @@ void kvm__arch_validate_cfg(struct kvm *kvm)
 
 	if (kvm->cfg.arch.e2h0 && !kvm->cfg.arch.nested_virt)
 		pr_warning("--e2h0 requires --nested, ignoring");
+
+	if (kvm->cfg.arch.guest_memfd) {
+		/* Requires in-place shared/private conversion of guest_memfd. */
+		if (kvm->cfg.arch.protected)
+			die("Protected VMs do not yet support guest_memfd");
+
+		if (kvm->cfg.hugetlbfs_path)
+			die("guest_memfd cannot be backed by hugetlbfs");
+	}
 
 	if (kvm->cfg.arch.protected) {
 		if (kvm->cfg.ram_size &&
