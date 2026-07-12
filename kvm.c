@@ -237,9 +237,9 @@ out:
 }
 
 int kvm__register_mem(struct kvm *kvm, u64 guest_phys, u64 size,
-		      void *userspace_addr, enum kvm_mem_type type)
+		      void *userspace_addr, int guest_memfd,
+		      u64 guest_memfd_offset, enum kvm_mem_type type)
 {
-	struct kvm_userspace_memory_region mem;
 	struct kvm_mem_bank *merged = NULL;
 	struct kvm_mem_bank *bank;
 	struct list_head *prev_entry;
@@ -320,15 +320,31 @@ int kvm__register_mem(struct kvm *kvm, u64 guest_phys, u64 size,
 		flags |= KVM_MEM_READONLY;
 
 	if (type != KVM_MEM_TYPE_RESERVED) {
-		mem = (struct kvm_userspace_memory_region) {
-			.slot			= slot,
-			.flags			= flags,
-			.guest_phys_addr	= guest_phys,
-			.memory_size		= size,
-			.userspace_addr		= (unsigned long)userspace_addr,
-		};
+		if (guest_memfd >= 0) {
+			struct kvm_userspace_memory_region2 mem2 = {
+				.slot			= slot,
+				.flags			= flags | KVM_MEM_GUEST_MEMFD,
+				.guest_phys_addr	= guest_phys,
+				.memory_size		= size,
+				.userspace_addr		= (unsigned long)userspace_addr,
+				.guest_memfd		= guest_memfd,
+				.guest_memfd_offset	= guest_memfd_offset,
+			};
 
-		ret = ioctl(kvm->vm_fd, KVM_SET_USER_MEMORY_REGION, &mem);
+			ret = ioctl(kvm->vm_fd, KVM_SET_USER_MEMORY_REGION2,
+				    &mem2);
+		} else {
+			struct kvm_userspace_memory_region mem = {
+				.slot			= slot,
+				.flags			= flags,
+				.guest_phys_addr	= guest_phys,
+				.memory_size		= size,
+				.userspace_addr		= (unsigned long)userspace_addr,
+			};
+
+			ret = ioctl(kvm->vm_fd, KVM_SET_USER_MEMORY_REGION,
+				    &mem);
+		}
 		if (ret < 0) {
 			ret = -errno;
 			goto out;

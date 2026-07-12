@@ -128,11 +128,23 @@ bool kvm__emulate_io(struct kvm_cpu *vcpu, u16 port, void *data, int direction, 
 bool kvm__emulate_mmio(struct kvm_cpu *vcpu, u64 phys_addr, u8 *data, u32 len, u8 is_write);
 int kvm__destroy_mem(struct kvm *kvm, u64 guest_phys, u64 size, void *userspace_addr);
 int kvm__register_mem(struct kvm *kvm, u64 guest_phys, u64 size, void *userspace_addr,
+		      int guest_memfd, u64 guest_memfd_offset,
 		      enum kvm_mem_type type);
 static inline int kvm__register_ram(struct kvm *kvm, u64 guest_phys, u64 size,
 				    void *userspace_addr)
 {
 	return kvm__register_mem(kvm, guest_phys, size, userspace_addr,
+				 -1, 0, KVM_MEM_TYPE_RAM);
+}
+
+static inline int kvm__register_ram_guest_memfd(struct kvm *kvm, u64 guest_phys,
+						u64 size, void *userspace_addr,
+						int guest_memfd,
+						u64 guest_memfd_offset)
+{
+	BUG_ON(guest_memfd < 0);
+	return kvm__register_mem(kvm, guest_phys, size, userspace_addr,
+				 guest_memfd, guest_memfd_offset,
 				 KVM_MEM_TYPE_RAM);
 }
 
@@ -140,13 +152,13 @@ static inline int kvm__register_dev_mem(struct kvm *kvm, u64 guest_phys,
 					u64 size, void *userspace_addr)
 {
 	return kvm__register_mem(kvm, guest_phys, size, userspace_addr,
-				 KVM_MEM_TYPE_DEVICE);
+				 -1, 0, KVM_MEM_TYPE_DEVICE);
 }
 
 static inline int kvm__reserve_mem(struct kvm *kvm, u64 guest_phys, u64 size)
 {
 	return kvm__register_mem(kvm, guest_phys, size, NULL,
-				 KVM_MEM_TYPE_RESERVED);
+				 -1, 0, KVM_MEM_TYPE_RESERVED);
 }
 
 int __must_check kvm__register_iotrap(struct kvm *kvm, u64 phys_addr, u64 len,
