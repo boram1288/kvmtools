@@ -81,6 +81,9 @@ int riscv__cpu_type_parser(const struct option *opt, const char *arg, int unset)
 	OPT_BOOLEAN('\0', "disable-zacas",				\
 		    &(cfg)->ext_disabled[KVM_RISCV_ISA_EXT_ZACAS],	\
 		    "Disable Zacas Extension"),				\
+	OPT_BOOLEAN('\0', "disable-zalasr",				\
+		    &(cfg)->ext_disabled[KVM_RISCV_ISA_EXT_ZALASR],	\
+		    "Disable Zalasr Extension"),			\
 	OPT_BOOLEAN('\0', "disable-zawrs",				\
 		    &(cfg)->ext_disabled[KVM_RISCV_ISA_EXT_ZAWRS],	\
 		    "Disable Zawrs Extension"),				\
@@ -117,6 +120,9 @@ int riscv__cpu_type_parser(const struct option *opt, const char *arg, int unset)
 	OPT_BOOLEAN('\0', "disable-zcf",				\
 		    &(cfg)->ext_disabled[KVM_RISCV_ISA_EXT_ZCF],	\
 		    "Disable Zcf Extension"),				\
+	OPT_BOOLEAN('\0', "disable-zclsd",				\
+		    &(cfg)->ext_disabled[KVM_RISCV_ISA_EXT_ZCLSD],	\
+		    "Disable Zclsd Extension"),			\
 	OPT_BOOLEAN('\0', "disable-zcmop",				\
 		    &(cfg)->ext_disabled[KVM_RISCV_ISA_EXT_ZCMOP],	\
 		    "Disable Zcmop Extension"),				\
@@ -165,6 +171,9 @@ int riscv__cpu_type_parser(const struct option *opt, const char *arg, int unset)
 	OPT_BOOLEAN('\0', "disable-zihpm",				\
 		    &(cfg)->ext_disabled[KVM_RISCV_ISA_EXT_ZIHPM],	\
 		    "Disable Zihpm Extension"),				\
+	OPT_BOOLEAN('\0', "disable-zilsd",				\
+		    &(cfg)->ext_disabled[KVM_RISCV_ISA_EXT_ZILSD],	\
+		    "Disable Zilsd Extension"),			\
 	OPT_BOOLEAN('\0', "disable-zimop",				\
 		    &(cfg)->ext_disabled[KVM_RISCV_ISA_EXT_ZIMOP],	\
 		    "Disable Zimop Extension"),				\
