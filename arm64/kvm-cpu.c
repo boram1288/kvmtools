@@ -53,34 +53,34 @@ int kvm_cpu__register_kvm_arm_target(struct kvm_arm_target *target)
 static void kvm_cpu__select_features(struct kvm *kvm, struct kvm_vcpu_init *init)
 {
 	if (kvm->cfg.arch.aarch32_guest) {
-		if (!kvm__supports_extension(kvm, KVM_CAP_ARM_EL1_32BIT))
+		if (!kvm__supports_vm_extension(kvm, KVM_CAP_ARM_EL1_32BIT))
 			die("32bit guests are not supported\n");
 		init->features[0] |= 1UL << KVM_ARM_VCPU_EL1_32BIT;
 	}
 
 	if (kvm->cfg.arch.has_pmuv3) {
-		if (!kvm__supports_extension(kvm, KVM_CAP_ARM_PMU_V3))
+		if (!kvm__supports_vm_extension(kvm, KVM_CAP_ARM_PMU_V3))
 			die("PMUv3 is not supported");
 		init->features[0] |= 1UL << KVM_ARM_VCPU_PMU_V3;
 	}
 
 	/* Enable pointer authentication if available */
-	if (kvm__supports_extension(kvm, KVM_CAP_ARM_PTRAUTH_ADDRESS) &&
-	    kvm__supports_extension(kvm, KVM_CAP_ARM_PTRAUTH_GENERIC)) {
+	if (kvm__supports_vm_extension(kvm, KVM_CAP_ARM_PTRAUTH_ADDRESS) &&
+	    kvm__supports_vm_extension(kvm, KVM_CAP_ARM_PTRAUTH_GENERIC)) {
 		init->features[0] |= 1UL << KVM_ARM_VCPU_PTRAUTH_ADDRESS;
 		init->features[0] |= 1UL << KVM_ARM_VCPU_PTRAUTH_GENERIC;
 	}
 
 	/* Enable SVE if available */
-	if (kvm__supports_extension(kvm, KVM_CAP_ARM_SVE))
+	if (kvm__supports_vm_extension(kvm, KVM_CAP_ARM_SVE))
 		init->features[0] |= 1UL << KVM_ARM_VCPU_SVE;
 
 	if (kvm->cfg.arch.nested_virt) {
-		if (!kvm__supports_extension(kvm, KVM_CAP_ARM_EL2))
+		if (!kvm__supports_vm_extension(kvm, KVM_CAP_ARM_EL2))
 			die("EL2 (nested virt) is not supported");
 		init->features[0] |= 1UL << KVM_ARM_VCPU_HAS_EL2;
 		if (kvm->cfg.arch.e2h0) {
-			if (!kvm__supports_extension(kvm, KVM_CAP_ARM_EL2_E2H0))
+			if (!kvm__supports_vm_extension(kvm, KVM_CAP_ARM_EL2_E2H0))
 				die("FEAT_E2H0 is not supported");
 			init->features[0] |= 1UL << KVM_ARM_VCPU_HAS_EL2_E2H0;
 		}
@@ -123,7 +123,7 @@ static int vcpu_configure_sve(struct kvm_cpu *vcpu)
 
 static int kvm_cpu__configure_features(struct kvm_cpu *vcpu)
 {
-	if (kvm__supports_extension(vcpu->kvm, KVM_CAP_ARM_SVE))
+	if (kvm__supports_vm_extension(vcpu->kvm, KVM_CAP_ARM_SVE))
 		return vcpu_configure_sve(vcpu);
 
 	return 0;
