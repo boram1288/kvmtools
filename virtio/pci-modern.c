@@ -246,9 +246,11 @@ static bool virtio_pci__isr_read(struct virtio_device *vdev,
 	if (WARN_ON(offset - VPCI_CFG_ISR_START != 0))
 		return false;
 
+	mutex_lock(&vpci->isr_lock);
 	ioport__write8(data, vpci->isr);
-	kvm__irq_line(vpci->kvm, vpci->legacy_irq_line, VIRTIO_IRQ_LOW);
 	vpci->isr = 0;
+	kvm__irq_line(vpci->kvm, vpci->legacy_irq_line, VIRTIO_IRQ_LOW);
+	mutex_unlock(&vpci->isr_lock);
 
 	return 0;
 }

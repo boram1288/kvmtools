@@ -242,8 +242,10 @@ int virtio_pci__signal_vq(struct kvm *kvm, struct virtio_device *vdev, u32 vq)
 		else
 			kvm__irq_trigger(kvm, vpci->gsis[vq]);
 	} else {
+		mutex_lock(&vpci->isr_lock);
 		vpci->isr |= VIRTIO_PCI_ISR_QUEUE;
 		kvm__irq_line(kvm, vpci->legacy_irq_line, VIRTIO_IRQ_HIGH);
+		mutex_unlock(&vpci->isr_lock);
 	}
 	return 0;
 }
@@ -266,8 +268,10 @@ int virtio_pci__signal_config(struct kvm *kvm, struct virtio_device *vdev)
 		else
 			kvm__irq_trigger(kvm, vpci->config_gsi);
 	} else {
+		mutex_lock(&vpci->isr_lock);
 		vpci->isr |= VIRTIO_PCI_ISR_CONFIG;
 		kvm__irq_line(kvm, vpci->legacy_irq_line, VIRTIO_IRQ_HIGH);
+		mutex_unlock(&vpci->isr_lock);
 	}
 
 	return 0;
@@ -346,6 +350,7 @@ int virtio_pci__init(struct kvm *kvm, void *dev, struct virtio_device *vdev,
 
 	vpci->kvm = kvm;
 	vpci->dev = dev;
+	mutex_init(&vpci->isr_lock);
 
 	BUILD_BUG_ON(!is_power_of_two(PCI_IO_SIZE));
 

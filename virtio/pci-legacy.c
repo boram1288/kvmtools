@@ -59,9 +59,11 @@ static bool virtio_pci__data_in(struct kvm_cpu *vcpu, struct virtio_device *vdev
 		ioport__write8(data, vpci->status);
 		break;
 	case VIRTIO_PCI_ISR:
+		mutex_lock(&vpci->isr_lock);
 		ioport__write8(data, vpci->isr);
-		kvm__irq_line(kvm, vpci->legacy_irq_line, VIRTIO_IRQ_LOW);
 		vpci->isr = 0;
+		kvm__irq_line(kvm, vpci->legacy_irq_line, VIRTIO_IRQ_LOW);
+		mutex_unlock(&vpci->isr_lock);
 		break;
 	default:
 		ret = virtio_pci__specific_data_in(kvm, vdev, data, size, offset);

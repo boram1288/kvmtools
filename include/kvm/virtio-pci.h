@@ -2,6 +2,7 @@
 #define KVM__VIRTIO_PCI_H
 
 #include "kvm/devices.h"
+#include "kvm/mutex.h"
 #include "kvm/pci.h"
 #include "kvm/virtio.h"
 
@@ -37,6 +38,8 @@ struct virtio_pci {
 	bool			signal_msi;
 	u8			status;
 	u8			isr;
+	/* Serializes legacy ISR bits and INTx line state. */
+	struct mutex		isr_lock;
 	u32			device_features_sel;
 	u32			driver_features_sel;
 
