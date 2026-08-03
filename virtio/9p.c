@@ -1375,8 +1375,10 @@ static void virtio_p9_do_io(struct kvm *kvm, void *param)
 
 	while (virt_queue__available(vq)) {
 		virtio_p9_do_io_request(kvm, job);
-		p9dev->vdev.ops->signal_vq(kvm, &p9dev->vdev, vq - p9dev->vqs);
 	}
+
+	if (virtio_queue__should_signal(vq))
+		p9dev->vdev.ops->signal_vq(kvm, &p9dev->vdev, vq - p9dev->vqs);
 }
 
 static u8 *get_config(struct kvm *kvm, void *dev)
