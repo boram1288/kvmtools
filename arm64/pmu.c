@@ -75,7 +75,7 @@ static int find_pmu_cpumask(struct kvm *kvm, cpumask_t *cpumask)
 	unsigned long val;
 	ssize_t fd_sz;
 	int fd, ret;
-	DIR *dir;
+	DIR *dir = NULL;
 
 	memset(buf, 0, sizeof(buf));
 
@@ -107,11 +107,12 @@ static int find_pmu_cpumask(struct kvm *kvm, cpumask_t *cpumask)
 			goto next_dir;
 
 		fd_sz = read_file(fd, cpulist, PAGE_SIZE);
+		ret = errno;
+		close(fd);
 		if (fd_sz < 0) {
-			pmu_id = -errno;
+			pmu_id = -ret;
 			goto out_free;
 		}
-		close(fd);
 
 		ret = cpulist_parse(cpulist, &pmu_cpumask);
 		if (ret) {
@@ -140,11 +141,12 @@ static int find_pmu_cpumask(struct kvm *kvm, cpumask_t *cpumask)
 			goto next_dir;
 
 		fd_sz = read_file(fd, buf, PMU_ID_MAXLEN - 1);
+		ret = errno;
+		close(fd);
 		if (fd_sz < 0) {
-			pmu_id = -errno;
+			pmu_id = -ret;
 			goto out_free;
 		}
-		close(fd);
 
 		val = strtoul(buf, NULL, 10);
 		if (val > INT_MAX) {
@@ -162,6 +164,8 @@ next_dir:
 	}
 
 out_free:
+	if (dir)
+		closedir(dir);
 	free(path);
 	free(cpulist);
 	return pmu_id;
