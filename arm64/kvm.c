@@ -18,6 +18,13 @@
 
 #include <asm/image.h>
 
+#ifndef KVM_CAP_ARM_PROTECTED_VM
+#define KVM_CAP_ARM_PROTECTED_VM		0xffbadab1
+#endif
+#ifndef KVM_CAP_ARM_PROTECTED_VM_FLAGS_SET_FFA
+#define KVM_CAP_ARM_PROTECTED_VM_FLAGS_SET_FFA	2
+#endif
+
 static struct arm64_image_header *kernel_header;
 
 struct kvm_ext kvm_req_ext[] = {
@@ -164,6 +171,19 @@ static void kvm__arch_set_counter_offset(struct kvm *kvm)
 
 void kvm__arch_init(struct kvm *kvm)
 {
+	if (kvm->cfg.arch.protected_ffa) {
+		struct kvm_enable_cap cap = {
+			.cap = KVM_CAP_ARM_PROTECTED_VM,
+			.flags = KVM_CAP_ARM_PROTECTED_VM_FLAGS_SET_FFA,
+			.args[0] = 1,
+		};
+
+		if (!kvm->cfg.arch.protected)
+			die("--protected-ffa requires --protected");
+		if (ioctl(kvm->vm_fd, KVM_ENABLE_CAP, &cap))
+			die_perror("KVM_ENABLE_CAP(SET_FFA)");
+	}
+
 	/* Create the virtual GIC. */
 	if (gic__create(kvm, kvm->cfg.arch.irqchip))
 		die("Failed to create virtual GIC");
